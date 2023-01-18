@@ -1,0 +1,70 @@
+# Debug模式
+# 非开发者可以关闭
+Debug_Mode: true
+
+
+# 机器人登录所用协议
+# 默认（DEFAULT）为ANDROID_WATCH（安卓手表）
+# 可用协议：ANDROID_WATCH, ANDROID_PHONE, ANDROID_PAD, IPAD, MACOS
+# 可用字段的含义很清晰，因此不再进一步解释
+Bot_Protocol: "DEFAULT"
+
+
+# 机器人心跳包
+# 默认（DEFAULT）为STAT_HB
+# 可用字段：STAT_HB, REGISTER, NONE
+# WARN！！如果你不懂这个是干什么用的，请保持默认值，不要随意修改！！
+Bot_HeartbeatStrategy: "DEFAULT"
+
+
+# 是否显示Mirai机器人日志：
+Show_Mirai_Bot_Log: false
+
+
+# 是否显示机器人网络日志：
+Show_Network_Log: false
+
+
+# WebSocket服务器监听地址
+WS_Port: 16123
+
+
+# 机器人登录信息：
+Account: 848730296
+Password: "Disy123456"
+
+
+# 广播Token，在发送广播信息时用于鉴权
+Announce_Token: null
+
+
+# 服务器群：
+Old_Server_Group: 535392227  # 旧服务器群，会t出已经进新服的成员
+Main_Server_Group: 755804021  # 主服务器群，插件会监听该群的所有情况（包括用户入群与退群）
+Bind_Only_Group:  # 仅允许绑定/删除ID的群，可以用于测试，请将主服务器群一并包含于此！！！
+  - 755804021
+  - 869989212
+  - 1134701006
+  - 128122335
+Review_Group: 869989212  # 审核专用群，用于发送一些审核状态消息
+Internal_Server_Group:  # 内服群，允许内服的一些操作
+  - 128122335
+
+# 服务器相关信息：
+Owner_QQ: # 腐竹的QQ（会成为机器人的主人）
+  - 1481567451
+Admins_QQ:  # 管理员(们)的QQ
+  - 1481567451
+Internal_Admins_QQ:  # 内服管理员(们)的QQ
+  - 1481567451
+
+# 各种消息的配置文件：
+
+# 踢出不在白名的玩家时显示的信息
+Kick_Message: "§d§l[StarLight服务器]§6§l你好像还没有绑定过你的ID
+请加入我们的QQ群:§b535392227
+§6§l并在群里发送§e“#绑定ID:你的ID”
+§l§6即可§a正常§6进入服务器了哦！"
+
+# 提示去做审核题时机器人发送的消息
+Require_Exam_Message: "你好像还没通过审核哦！先去做一下审核题吧！审核题传送门：https://ks.wjx.top/vj/w6ktU8L.aspx"

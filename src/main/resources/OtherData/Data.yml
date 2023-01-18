@@ -1,0 +1,4 @@
+Disy920:
+  IP: "145.53.111.212"  # 记录上次登陆的IP地址
+  No_Password_Stamp: 0  # 免密登录截止的时间戳
+  Is_Online_Mode: true  # 是否为正版认证玩家（为其开启正版验证）

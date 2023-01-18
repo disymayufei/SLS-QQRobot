@@ -1,0 +1,5 @@
+name: SL_QBot
+main: cn.starlight.disy.qqbot.Main
+version: 3.0
+author: Disy
+api-version: 1.16

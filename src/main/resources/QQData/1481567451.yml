@@ -1,0 +1,13 @@
+# WARN!此配置文件仅供演示，作为QQData内配置文件的示例
+# 请不要真的将该文件打包进jar文件，或拷贝至QQData目录下
+
+# 记录QQ号，类型为long
+QQ_Number: 1481567451
+
+# 记录是否通过审核，类型为boolean
+Had_Allowed: true
+
+# 记录名下绑定的ID，类型为List<String>
+Bind_ID:
+  - Disy
+  - Disy920
