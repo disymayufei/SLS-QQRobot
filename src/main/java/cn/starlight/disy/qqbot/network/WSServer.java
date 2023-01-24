@@ -7,6 +7,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import net.mamoe.mirai.contact.Group;
+import net.mamoe.mirai.message.data.At;
+import net.mamoe.mirai.message.data.MessageChainBuilder;
 import org.java_websocket.WebSocket;
 import org.java_websocket.handshake.ClientHandshake;
 import org.java_websocket.server.WebSocketServer;
@@ -16,6 +18,8 @@ import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static cn.starlight.disy.qqbot.Main.GSON;
 import static cn.starlight.disy.qqbot.Main.PLUGIN_INSTANCE;
@@ -48,6 +52,8 @@ public class WSServer extends WebSocketServer {
             "如有变动，请及时修改内服假人，机器，Mod等信息！总览地址：https://sls.wiki/index.php?title=SLS%E5%86%85%E6%9C%8D"
     );
 
+    private final Pattern AT_REGEX = Pattern.compile("\\{@([0-9])*\\}");
+
     private int checkServerExtraMsgCounter = 0;
     private int checkInternalServerExtraMsgCounter = 0;
     private int checkInternalServerExtraMsgForInternalGroupCounter = 0;
@@ -66,6 +72,7 @@ public class WSServer extends WebSocketServer {
     public void onClose(WebSocket conn, int code, String reason, boolean remote) {
         for(Map.Entry<String, WebSocket> entry : connectionMap.entrySet()){
             if(entry.getValue().equals(conn)){
+                Logger.warn(String.format("%s关闭了连接，状态码：%d, 原因：%s", entry.getKey(), code, reason));
                 connectionMap.remove(entry.getKey());
                 break;
             }
@@ -76,6 +83,8 @@ public class WSServer extends WebSocketServer {
     public void onError(WebSocket conn, Exception e) {
         for(Map.Entry<String, WebSocket> entry : connectionMap.entrySet()){
             if(entry.getValue().equals(conn)){
+                Logger.warn(String.format("%s的连接出错，错误堆栈信息如下：", entry.getKey()));
+                e.printStackTrace();
                 connectionMap.remove(entry.getKey());
                 break;
             }
@@ -166,7 +175,40 @@ public class WSServer extends WebSocketServer {
                     JsonObject packetArg = receiveObj.getAsJsonObject("args");
                     String token = packetArg.get("token").getAsString();
                     if(token.equals(PLUGIN_INSTANCE.getConfig().getString("Announce_Token"))){
-                        String announceMsg = packetArg.get("msg").getAsString();
+                        String rawAnnounceMsg = packetArg.get("msg").getAsString();
+                        Matcher m = AT_REGEX.matcher(rawAnnounceMsg);
+                        int index = 0;
+                        int targetIndex = -1;
+                        if(m.find()){
+                            targetIndex = m.start();
+                        }
+                        MessageChainBuilder announceMsgBuilder = new MessageChainBuilder();
+                        while (index < rawAnnounceMsg.length()){
+                            if(index == targetIndex){
+                                index = m.end();
+                                String targetQQNumStr = rawAnnounceMsg.substring(m.start(), m.end()).replace("{@", "").replace("}", "");
+
+                                if(m.find()){
+                                    targetIndex = m.start();
+                                }
+
+                                long targetQQNum;
+
+                                try {
+                                    targetQQNum = Long.parseLong(targetQQNumStr);
+                                }
+                                catch (Exception e){
+                                    continue;
+                                }
+
+                                announceMsgBuilder.append(new At(targetQQNum));
+                            }
+                            else {
+                                announceMsgBuilder.append(rawAnnounceMsg.charAt(index));
+                                index++;
+                            }
+                        }
+
                         List<Long> QQGroupList = PLUGIN_INSTANCE.getConfig().getLongList("Bind_Only_Group");
 
                         if(groupArray != null && groupArray.size() > 0){
@@ -175,7 +217,7 @@ public class WSServer extends WebSocketServer {
                                 if(QQGroupList.contains(group)){
                                     Group allowGroup = RUNNABLE_BOT_INSTANCE.getCore().getGroup(group);
                                     if(allowGroup != null){
-                                        allowGroup.sendMessage(announceMsg);
+                                        allowGroup.sendMessage(announceMsgBuilder.build());
                                     }
                                 }
                             }
@@ -184,7 +226,7 @@ public class WSServer extends WebSocketServer {
                             for(Long group : QQGroupList){
                                 Group allowGroup = RUNNABLE_BOT_INSTANCE.getCore().getGroup(group);
                                 if(allowGroup != null){
-                                    allowGroup.sendMessage(announceMsg);
+                                    allowGroup.sendMessage(announceMsgBuilder.build());
                                 }
                             }
                         }
@@ -257,7 +299,7 @@ public class WSServer extends WebSocketServer {
                                 if(internalGroup.size() > 0){
                                     AnnounceToAllGroups(internalGroup, CHECK_INTERNAL_SERVER_EXTRA_MSG_FOR_INTERNAL_GROUP.get(checkInternalServerExtraMsgForInternalGroupCounter));
                                     checkInternalServerExtraMsgForInternalGroupCounter++;
-                                    if(checkInternalServerExtraMsgForInternalGroupCounter > CHECK_INTERNAL_SERVER_EXTRA_MSG_FOR_INTERNAL_GROUP.size()){
+                                    if(checkInternalServerExtraMsgForInternalGroupCounter >= CHECK_INTERNAL_SERVER_EXTRA_MSG_FOR_INTERNAL_GROUP.size()){
                                         checkInternalServerExtraMsgForInternalGroupCounter = 0;
                                     }
                                 }
@@ -265,7 +307,7 @@ public class WSServer extends WebSocketServer {
                                 if(otherGroup.size() > 0){
                                     AnnounceToAllGroups(otherGroup, CHECK_INTERNAL_SERVER_EXTRA_MSG.get(checkInternalServerExtraMsgCounter));
                                     checkInternalServerExtraMsgCounter++;
-                                    if(checkInternalServerExtraMsgCounter > CHECK_INTERNAL_SERVER_EXTRA_MSG.size()){
+                                    if(checkInternalServerExtraMsgCounter >= CHECK_INTERNAL_SERVER_EXTRA_MSG.size()){
                                         checkInternalServerExtraMsgCounter = 0;
                                     }
                                 }
