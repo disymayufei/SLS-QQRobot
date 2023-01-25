@@ -17,7 +17,9 @@ import net.mamoe.mirai.event.events.GroupMessageEvent;
 import net.mamoe.mirai.event.events.MemberJoinEvent;
 import net.mamoe.mirai.event.events.MemberJoinRequestEvent;
 import net.mamoe.mirai.message.data.At;
+import net.mamoe.mirai.message.data.ForwardMessageBuilder;
 import net.mamoe.mirai.message.data.MessageChainBuilder;
+import net.mamoe.mirai.message.data.PlainText;
 import org.java_websocket.WebSocket;
 import org.jetbrains.annotations.NotNull;
 
@@ -337,11 +339,20 @@ public class NormalMemberOperates {
                 }
                 else {
                     event.getGroup().sendMessage(this.getPlayerHelpText());
+
+                    ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
+                    helpMesBuilder.add(1481567451L, "大SB腐竹", new PlainText(this.getPlayerHelpText()));
+                    helpMesBuilder.add(event);
+                    event.getGroup().sendMessage(helpMesBuilder.build());
                 }
             }
 
             if(PLAYER_HELP_REGEX.matcher(groupMes).matches()){
                 event.getGroup().sendMessage(this.getPlayerHelpText());
+                ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
+                helpMesBuilder.add(1481567451L, "大SB腐竹", new PlainText(this.getPlayerHelpText()));
+                helpMesBuilder.add(event);
+                event.getGroup().sendMessage(helpMesBuilder.build());
             }
         }
 

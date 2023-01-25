@@ -125,7 +125,7 @@ public class AdminOperates {
 
                     try {
                         long qq_num = Long.parseLong(player_qq_num);
-                        if(qq_num < 99999){
+                        if(qq_num < 9999){
                             event.getGroup().sendMessage("管理大大！你通过的真的是个QQ号嘛？");
                             return;
                         }
@@ -186,7 +186,7 @@ public class AdminOperates {
 
                     try {
                         long qq_num = Long.parseLong(player_qq_num);
-                        if(qq_num < 99999){
+                        if(qq_num < 9999){
                             event.getGroup().sendMessage("管理大大！你通过的真的是个QQ号嘛？");
                             return;
                         }
