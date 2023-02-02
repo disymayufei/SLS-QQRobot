@@ -1,10 +1,7 @@
 package cn.starlight.disy.qqbot.bot;
 
 import cn.starlight.disy.qqbot.network.WSServer;
-import cn.starlight.disy.qqbot.utils.DatabaseOperates;
-import cn.starlight.disy.qqbot.utils.DateTime;
-import cn.starlight.disy.qqbot.utils.Logger;
-import cn.starlight.disy.qqbot.utils.PlayerOperates;
+import cn.starlight.disy.qqbot.utils.*;
 import kotlin.Unit;
 import kotlin.coroutines.Continuation;
 import kotlin.coroutines.CoroutineContext;
@@ -20,6 +17,7 @@ import net.mamoe.mirai.message.data.At;
 import net.mamoe.mirai.message.data.ForwardMessageBuilder;
 import net.mamoe.mirai.message.data.MessageChainBuilder;
 import net.mamoe.mirai.message.data.PlainText;
+import net.mamoe.mirai.utils.ExternalResource;
 import org.java_websocket.WebSocket;
 import org.jetbrains.annotations.NotNull;
 
@@ -30,6 +28,7 @@ import java.util.regex.Pattern;
 
 import static cn.starlight.disy.qqbot.Main.GSON;
 import static cn.starlight.disy.qqbot.Main.PLUGIN_INSTANCE;
+import static cn.starlight.disy.qqbot.bot.RunnableBot.BOT_INSTANCE;
 import static cn.starlight.disy.qqbot.bot.RunnableBot.RUNNABLE_BOT_INSTANCE;
 import static cn.starlight.disy.qqbot.utils.DatabaseOperates.DATABASE;
 
@@ -80,7 +79,7 @@ public class NormalMemberOperates {
 
 
     /* 预编译的正则，防止接收消息时临时编译，拖慢机器人处理速度 */
-    private final Pattern ID_CHECK_REGEX = Pattern.compile("^[A-za-z][A-Za-z0-9_-]{3,19}$");
+    private final Pattern ID_CHECK_REGEX = Pattern.compile("^[A-Za-z0-9_-]{3,20}$");
     private final Pattern BIND_ID_REGEX = Pattern.compile("^[#＃]绑定ID[:：]", Pattern.CASE_INSENSITIVE);
     private final Pattern DEL_ID_REGEX = Pattern.compile("^[#＃]删除ID[:：]", Pattern.CASE_INSENSITIVE);
     private final Pattern SEARCH_ID_REGEX = Pattern.compile("^[#＃]查询绑定ID", Pattern.CASE_INSENSITIVE);
@@ -136,11 +135,11 @@ public class NormalMemberOperates {
                     List<String> bindIDList = DatabaseOperates.checkBindID(senderID);
                     if (bindIDList.size() < 2) {
                         String playerID = groupMes.substring(6);
-                        if (playerID.length() < 4 || playerID.length() > 20) {
+                        if (playerID.length() < 3 || playerID.length() > 20) {
                             event.getGroup().sendMessage(new MessageChainBuilder()
                                     .append(new At(senderID))
                                     .append(" ")
-                                    .append("ID的长度仅允许在4~20（含上下限）之间哦！")
+                                    .append("ID的长度仅允许在3~20（含上下限）之间哦！")
                                     .build()
                             );
                             return;
@@ -335,24 +334,49 @@ public class NormalMemberOperates {
 
             if(HELP_REGEX.matcher(groupMes).matches()){
                 if(adminList.contains(senderID)){
-                    event.getGroup().sendMessage(this.getAdminHelpText());
+                    try{
+                        event.getGroup().sendMessage(ExternalResource.uploadAsImage(PixelFont.gen(this.getAdminHelpText(), 25), event.getGroup()));
+                    }
+                    catch (Exception e){
+                        event.getGroup().sendMessage("图片帮助信息发送失败，我将送上文字版哦！");
+                        event.getGroup().sendMessage(this.getAdminHelpText());
+                        e.printStackTrace();
+                    }
+
                 }
                 else {
-                    event.getGroup().sendMessage(this.getPlayerHelpText());
+                    try{
+                        event.getGroup().sendMessage(ExternalResource.uploadAsImage(PixelFont.gen(this.getPlayerHelpText(), 25), event.getGroup()));
+                    }
+                    catch (Exception e){
+                        event.getGroup().sendMessage("图片帮助信息发送失败，我将送上文字版哦！");
+                        event.getGroup().sendMessage(this.getPlayerHelpText());
+                        e.printStackTrace();
+                    }
 
+                    /*
                     ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
-                    helpMesBuilder.add(1481567451L, "大SB腐竹", new PlainText(this.getPlayerHelpText()));
-                    helpMesBuilder.add(event);
+                    helpMesBuilder.add(BOT_INSTANCE.getBot(), new PlainText(this.getPlayerHelpText()));
                     event.getGroup().sendMessage(helpMesBuilder.build());
+                     */
                 }
             }
 
             if(PLAYER_HELP_REGEX.matcher(groupMes).matches()){
-                event.getGroup().sendMessage(this.getPlayerHelpText());
+                try{
+                    event.getGroup().sendMessage(ExternalResource.uploadAsImage(PixelFont.gen(this.getPlayerHelpText(), 25), event.getGroup()));
+                }
+                catch (Exception e){
+                    event.getGroup().sendMessage("图片帮助信息发送失败，我将送上文字版哦！");
+                    event.getGroup().sendMessage(this.getPlayerHelpText());
+                    e.printStackTrace();
+                }
+
+                /*
                 ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
-                helpMesBuilder.add(1481567451L, "大SB腐竹", new PlainText(this.getPlayerHelpText()));
-                helpMesBuilder.add(event);
+                helpMesBuilder.add(BOT_INSTANCE.getBot(), new PlainText(this.getPlayerHelpText()));
                 event.getGroup().sendMessage(helpMesBuilder.build());
+                 */
             }
         }
 
@@ -653,8 +677,9 @@ public class NormalMemberOperates {
             Logger.info("准备清理旧群人员");
 
             List<Long> admin_list = PLUGIN_INSTANCE.getConfig().getLongList("Admins_QQ");
-            admin_list.add(2739302193L);
-            admin_list.add(203701725L);
+            admin_list.add(2739302193L);  // pop猫
+            admin_list.add(203701725L);  // Feya
+            admin_list.add(1853359516L);  // Parzival
 
             int counter = 0;
 
@@ -697,8 +722,17 @@ public class NormalMemberOperates {
                 else {
                     if(member.getPermission().equals(MemberPermission.MEMBER)) {
                         if(!admin_list.contains(member.getId())){
-                            if(!member.getNameCard().contains("[未审核成员]")){
-                                member.setNameCard("[未审核成员] " + member.getNameCard());
+                            String memberNameCard = member.getNameCard();
+                            if(!memberNameCard.contains("[未审核成员]")){
+                                String newNameCard = "[未审核成员] ";
+                                if(memberNameCard.equals("")){
+                                    newNameCard += member.getNick();
+                                }
+                                else {
+                                    newNameCard += member.getNameCard();
+                                }
+
+                                member.setNameCard(newNameCard);
                             }
                         }
                     }
@@ -802,7 +836,7 @@ public class NormalMemberOperates {
      * 获取玩家帮助文档的方法
      * @return 玩家帮助文档中的内容，如果获取失败则返回一个不包含任何字符的字符串
      */
-    private String getPlayerHelpText(){
+    public static String getPlayerHelpText(){
         File help_data_file_player = new File(DATABASE, "HelpFile/player_help_msg.txt");
 
         if(help_data_file_player.exists()){

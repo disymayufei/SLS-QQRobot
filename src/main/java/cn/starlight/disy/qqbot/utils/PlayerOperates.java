@@ -2,6 +2,7 @@ package cn.starlight.disy.qqbot.utils;
 
 import com.google.common.base.Charsets;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.util.UUID;
@@ -98,9 +99,9 @@ public class PlayerOperates {
     /**
      * 设置玩家的正版认证状态
      * @param playerName 待设置的玩家名
-     * @param onlineMode 待设置的认证状态
+     * @param onlineMode 待设置的认证状态，为null则清除该玩家的正版认证信息
      */
-    public static void setOnlineMode(String playerName, boolean onlineMode){
+    public static void setOnlineMode(String playerName, @Nullable Boolean onlineMode){
         YamlConfiguration dataYaml = YamlConfiguration.loadConfiguration(PLAYER_DATA_FILE);
 
         dataYaml.set(playerName + ".Is_Online_Mode", onlineMode);

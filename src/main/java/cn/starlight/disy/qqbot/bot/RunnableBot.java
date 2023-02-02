@@ -8,6 +8,10 @@ import net.mamoe.mirai.Mirai;
 import net.mamoe.mirai.event.events.GroupMessageEvent;
 import net.mamoe.mirai.event.events.MemberJoinEvent;
 import net.mamoe.mirai.event.events.MemberJoinRequestEvent;
+import net.mamoe.mirai.message.data.ForwardMessage;
+import net.mamoe.mirai.message.data.ForwardMessageBuilder;
+import net.mamoe.mirai.message.data.Message;
+import net.mamoe.mirai.message.data.PlainText;
 import net.mamoe.mirai.utils.BotConfiguration;
 
 import java.io.File;
@@ -78,6 +82,30 @@ public class RunnableBot implements Runnable{
         new Thread(NORMAL_MEMBER_OPERATES_INSTANCE::kickPassedMember).start();
 
         /* 注册所有Bot事件 */
+        BOT_INSTANCE.getEventChannel().subscribeAlways(GroupMessageEvent.class, (event) -> {
+            String mes = event.getMessage().contentToString();
+            if(mes.startsWith("#测试 ")){
+                String sendingMes = mes.substring(4).replace("<br>", "\n");
+                ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
+                helpMesBuilder.add(event.getSender(), new PlainText(sendingMes));
+                event.getGroup().sendMessage(helpMesBuilder.build());
+            }
+            else if(mes.startsWith("#测试help ")){
+                String numStr = mes.substring(8);
+                int num;
+                try{
+                    num = Integer.parseInt(numStr);
+                }
+                catch (Exception e){
+                    return;
+                }
+
+                String help = NormalMemberOperates.getPlayerHelpText().substring(0, num);
+                ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
+                helpMesBuilder.add(event.getSender(), new PlainText(help));
+                event.getGroup().sendMessage(helpMesBuilder.build());
+            }
+        });
         BOT_INSTANCE.getEventChannel().subscribeAlways(GroupMessageEvent.class, NORMAL_MEMBER_OPERATES_INSTANCE::operatesListener);  // 玩家指令相关
         BOT_INSTANCE.getEventChannel().subscribeAlways(GroupMessageEvent.class, ADMIN_OPERATES_INSTANCE::adminMes);  // 管理指令相关
 

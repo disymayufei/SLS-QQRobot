@@ -6,7 +6,7 @@
 
     <groupId>cn.starlight.disy.qqbot</groupId>
     <artifactId>SL-QQBot</artifactId>
-    <version>3.0</version>
+    <version>3.1</version>
 
     <build>
         <plugins>
@@ -88,7 +88,7 @@
         <dependency>
             <groupId>net.mamoe</groupId>
             <artifactId>mirai-core-jvm</artifactId>
-            <version>2.13.4</version>
+            <version>2.14.0-RC</version>
             <scope>compile</scope>
         </dependency>
 

@@ -2,12 +2,12 @@ package cn.starlight.disy.qqbot.utils;
 
 import net.mamoe.mirai.contact.Group;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static cn.starlight.disy.qqbot.Main.PLUGIN_INSTANCE;
 import static cn.starlight.disy.qqbot.bot.RunnableBot.RUNNABLE_BOT_INSTANCE;
@@ -35,20 +35,18 @@ public class DatabaseOperates {
             return "不允许输入空内容哦！";
         }
 
-        if(playerID.length() < 4 || playerID.length() > 20){
-            return "用户名长度仅允许4~20个字符哦！";
-        }
-
-        if (!Pattern.compile("^\\w+$").matcher(playerID).matches()){
-            return "用户名仅允许英文字母，数字和下划线哦！";
-        }
-
         YamlConfiguration whitelistYaml = YamlConfiguration.loadConfiguration(WHITELIST);
 
         List<String> whitelistIDList = whitelistYaml.getStringList("WhiteList");
         if(whitelistIDList.contains(playerID)){
             return "这个ID已经被人绑定过了哦！";
         }
+        for (String ID : whitelistIDList){
+            if(playerID.equalsIgnoreCase(ID)){
+                return "这个ID有与之相近的ID: " + ID + "，请换一个与之区别更大的ID吧！";
+            }
+        }
+
         whitelistIDList.add(playerID);
         whitelistYaml.set("WhiteList", whitelistIDList);
 
@@ -465,6 +463,84 @@ public class DatabaseOperates {
 
 
     /**
+     * 将某玩家纳入未过审的列表
+     * @param QQNumber 玩家的QQ号
+     */
+    public synchronized static void addDenyList(long QQNumber){
+        try{
+            File denyListFile = new File(OTHER_DATA, "DenyList.yml");
+
+            if(denyListFile.exists()){
+                YamlConfiguration denyListYaml = YamlConfiguration.loadConfiguration(denyListFile);
+
+                List<Long> denyList = denyListYaml.getLongList("Deny_List");
+                denyList.add(QQNumber);
+
+                denyListYaml.set("Deny_List", denyList);
+
+                denyListYaml.save(denyListFile);
+            }
+        }
+        catch (Exception e){
+            Logger.error("添加审核未通过成员失败！以下是错误的堆栈信息：");
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * 将某玩家从未过审的列表中删除
+     * @param QQNumber 玩家的QQ号
+     */
+    public synchronized static void delDenyList(long QQNumber){
+        try{
+            File denyListFile = new File(OTHER_DATA, "DenyList.yml");
+
+            if(denyListFile.exists()){
+                YamlConfiguration denyListYaml = YamlConfiguration.loadConfiguration(denyListFile);
+
+                List<Long> denyList = denyListYaml.getLongList("Deny_List");
+                denyList.remove(QQNumber);
+
+                denyListYaml.set("Deny_List", denyList);
+
+                denyListYaml.save(denyListFile);
+            }
+        }
+        catch (Exception e){
+            Logger.error("移除审核未通过成员失败！以下是错误的堆栈信息：");
+            e.printStackTrace();
+        }
+    }
+
+
+    /**
+     * 获取所有未过审的玩家
+     * @return 一个包含所有未过审玩家QQ的列表
+     */
+    @NotNull
+    public synchronized static List<Long> getDenyList(){
+        try{
+            File denyListFile = new File(OTHER_DATA, "DenyList.yml");
+
+            if(denyListFile.exists()){
+                YamlConfiguration denyListYaml = YamlConfiguration.loadConfiguration(denyListFile);
+
+                return denyListYaml.getLongList("Deny_List");
+            }
+
+            return new ArrayList<>();
+        }
+        catch (Exception e){
+            Logger.error("添加审核未通过成员失败！以下是错误的堆栈信息：");
+            e.printStackTrace();
+
+            return new ArrayList<>();
+        }
+    }
+
+
+    /**
      * 删除一个人全部的信息（包括QQ号对应关系与白名单）
      * @param QQNumber 要删除用户的QQ号
      * @return 错误信息，如果没有错误则返回null
@@ -479,7 +555,7 @@ public class DatabaseOperates {
                 List<String> personalIDList = personDataYaml.getStringList("Bind_ID");
                 delWhiteList(personalIDList);  // 清除掉TA所有的白名单数据
 
-                personalDataFile.delete();  // 然后就删掉这个方法
+                personalDataFile.delete();  // 然后就删掉这个文件
             }
         }
         catch (Exception e){
@@ -540,6 +616,7 @@ public class DatabaseOperates {
 
         File[] QQList = QQ_DATA.listFiles();
         long mainServerGroup = PLUGIN_INSTANCE.getConfig().getLong("Main_Server_Group");
+        long examServerGroup = PLUGIN_INSTANCE.getConfig().getLong("Old_Server_Group");
 
         if(QQList != null){
             for(File playerData : QQList){
@@ -549,8 +626,9 @@ public class DatabaseOperates {
                         // 通过数据库文件名转换对应到玩家QQ号
                         if(playerQQNum != null){
                             Group serverGroup = RUNNABLE_BOT_INSTANCE.getCore().getGroup(mainServerGroup);
-                            if(serverGroup != null){
-                                if(serverGroup.get(playerQQNum) == null){
+                            Group examGroup = RUNNABLE_BOT_INSTANCE.getCore().getGroup(examServerGroup);
+                            if(serverGroup != null && examGroup != null){
+                                if(serverGroup.get(playerQQNum) == null && examGroup.get(playerQQNum) == null){
                                     String afterRemoveMsg = DatabaseOperates.clearPersonalData(playerQQNum);
                                     if(afterRemoveMsg == null){
                                         Logger.warn(playerQQNum + "已不在群中，其个人信息已被移除");

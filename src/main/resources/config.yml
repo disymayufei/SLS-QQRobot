@@ -24,6 +24,8 @@ Show_Mirai_Bot_Log: false
 # 是否显示机器人网络日志：
 Show_Network_Log: false
 
+# 是否在邀请的时候发送一张图片，可用于发送加群二维码等图片
+Send_Pic_While_Invite: true
 
 # WebSocket服务器监听地址
 WS_Port: 16123
@@ -36,7 +38,6 @@ Password: "Disy123456"
 
 # 广播Token，在发送广播信息时用于鉴权
 Announce_Token: null
-
 
 # 服务器群：
 Old_Server_Group: 535392227  # 旧服务器群，会t出已经进新服的成员

@@ -57,10 +57,15 @@ public class Main extends JavaPlugin {
 
     @Override
     public void onDisable(){
-        PLUGIN_INSTANCE = null;
+        if(RunnableBot.BOT_THREAD != null){
+            RunnableBot.BOT_THREAD.interrupt();
+        }
 
-        RunnableBot.BOT_THREAD.interrupt();
-        WSS_THREAD.interrupt();
+        if(WSS_THREAD != null){
+            WSS_THREAD.interrupt();
+        }
+
+        PLUGIN_INSTANCE = null;
 
         Logger.info("Bot关闭了哦，有缘再见！");
     }
@@ -70,6 +75,8 @@ public class Main extends JavaPlugin {
      */
     private void initDatabase(){
         this.saveDefaultConfig();  // 创建默认的Config文件
+
+        /* 适配旧的config文件 */
         if(this.getConfig().getString("Announce_Token") == null){
             try{
                 this.getConfig().set("Announce_Token", PasswordGenerator.gen());
@@ -77,6 +84,12 @@ public class Main extends JavaPlugin {
             catch (Exception e){
                 this.getConfig().set("Announce_Token", "CHANGEME!!");
             }
+            saveConfig();
+        }
+
+        if(this.getConfig().getString("Send_Pic_While_Invite") == null){
+            this.getConfig().set("Send_Pic_While_Invite", true);
+
             saveConfig();
         }
 
@@ -151,6 +164,21 @@ public class Main extends JavaPlugin {
             }
             catch (IOException e){
                 Logger.error("补充数据库(YAML)创建错误，插件即将自动关闭！以下是错误的堆栈信息：");
+                e.printStackTrace();
+                this.getPluginLoader().disablePlugin(this);
+            }
+        }
+
+        File denyListYml = new File(otherData, "DenyList.yml");
+        if(!denyListYml.exists()){
+            try {
+                if(!denyListYml.createNewFile()){
+                    Logger.error("审核未通过列表(YAML)创建失败，插件即将自动关闭！请进行检查！");
+                    this.getPluginLoader().disablePlugin(this);
+                }
+            }
+            catch (IOException e){
+                Logger.error("审核未通过列表(YAML)创建错误，插件即将自动关闭！以下是错误的堆栈信息：");
                 e.printStackTrace();
                 this.getPluginLoader().disablePlugin(this);
             }

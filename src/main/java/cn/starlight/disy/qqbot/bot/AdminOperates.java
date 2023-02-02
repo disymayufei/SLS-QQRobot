@@ -1,6 +1,7 @@
 package cn.starlight.disy.qqbot.bot;
 
 import cn.starlight.disy.qqbot.utils.DatabaseOperates;
+import cn.starlight.disy.qqbot.utils.Logger;
 import cn.starlight.disy.qqbot.utils.PlayerOperates;
 import net.mamoe.mirai.contact.Group;
 import net.mamoe.mirai.contact.NormalMember;
@@ -8,18 +9,23 @@ import net.mamoe.mirai.event.events.GroupMessageEvent;
 import net.mamoe.mirai.message.data.At;
 import net.mamoe.mirai.message.data.Message;
 import net.mamoe.mirai.message.data.MessageChainBuilder;
+import net.mamoe.mirai.utils.ExternalResource;
 
+import java.io.File;
 import java.util.List;
 import java.util.regex.Pattern;
 
 import static cn.starlight.disy.qqbot.Main.PLUGIN_INSTANCE;
 import static cn.starlight.disy.qqbot.bot.RunnableBot.RUNNABLE_BOT_INSTANCE;
+import static cn.starlight.disy.qqbot.utils.DatabaseOperates.DATABASE;
 
 public class AdminOperates {
 
     public static final AdminOperates ADMIN_OPERATES_INSTANCE = new AdminOperates();
 
-    private final Pattern EXAM_REGEX = Pattern.compile("^[#＃]审核通过[:：]");
+    private final Pattern ALLOW_EXAM_REGEX = Pattern.compile("^[#＃]审核通过[:：]");
+    private final Pattern DENY_EXAM_REGEX = Pattern.compile("^[#＃]拒绝审核[:：]");
+    private final Pattern CHECK_DENY_LIST_REGEX = Pattern.compile("^[#＃]查询未过审玩家$");
     private final Pattern SILENT_EXAM_REGEX = Pattern.compile("^[#＃]静默过审[:：]");
     private final Pattern WITHDRAW_EXAM_REGEX = Pattern.compile("^[#＃]撤销审核[:：]");
     private final Pattern ADD_ADMIN_REGEX = Pattern.compile("^[#＃]添加管理[:：]");
@@ -42,17 +48,17 @@ public class AdminOperates {
             /* 添加管理部分 */
             if(ADD_ADMIN_REGEX.matcher(msg).find()) {
                 if (PLUGIN_INSTANCE.getConfig().getLongList("Owner_QQ").contains(senderID)) {
-                    String player_qq_num = msg.substring(6);
+                    String playerQQNum = msg.substring(6);
 
                     try {
-                        long qq_num = Long.parseLong(player_qq_num);
-                        String status = DatabaseOperates.addAdmin(qq_num);
+                        long QQNum = Long.parseLong(playerQQNum);
+                        String status = DatabaseOperates.addAdmin(QQNum);
 
-                        if (event.getGroup().contains(qq_num)) {
+                        if (event.getGroup().contains(QQNum)) {
                             if (status == null) {
                                 event.getGroup().sendMessage(new MessageChainBuilder()
                                         .append("腐竹大大，已经添加")
-                                        .append(new At(qq_num))
+                                        .append(new At(QQNum))
                                         .append("进管理行列啦！")
                                         .build()
                                 );
@@ -61,7 +67,7 @@ public class AdminOperates {
                             }
 
                         } else {
-                            event.getGroup().sendMessage(status == null ? "腐竹大大，已经添加" + qq_num + "进管理行列啦！" : status);
+                            event.getGroup().sendMessage(status == null ? "腐竹大大，已经添加" + QQNum + "进管理行列啦！" : status);
                         }
                     } catch (Exception e) {
                         event.getGroup().sendMessage("腐竹腐竹，你添加的真的是个QQ号嘛？");
@@ -119,23 +125,23 @@ public class AdminOperates {
             /* 管理部分 */
 
             /* 审核通过部分 */
-            else if(EXAM_REGEX.matcher(msg).find()){
+            else if(ALLOW_EXAM_REGEX.matcher(msg).find()){
                 if(PLUGIN_INSTANCE.getConfig().getLongList("Admins_QQ").contains(senderID)) {
                     String player_qq_num = msg.substring(6);
 
                     try {
-                        long qq_num = Long.parseLong(player_qq_num);
-                        if(qq_num < 9999){
+                        long QQNum = Long.parseLong(player_qq_num);
+                        if(QQNum < 9999){
                             event.getGroup().sendMessage("管理大大！你通过的真的是个QQ号嘛？");
                             return;
                         }
-                        String status = DatabaseOperates.passTheExam(qq_num);
+                        String status = DatabaseOperates.passTheExam(QQNum);
 
-                        if (event.getGroup().contains(qq_num)) {
+                        if (event.getGroup().contains(QQNum)) {
                             if (status == null) {
                                 event.getGroup().sendMessage(new MessageChainBuilder()
                                         .append("管理大大，已经同意")
-                                        .append(new At(qq_num))
+                                        .append(new At(QQNum))
                                         .append("绑定白名单啦！")
                                         .build()
                                 );
@@ -145,21 +151,38 @@ public class AdminOperates {
                             }
 
                         } else {
-                            event.getGroup().sendMessage(status == null ? "管理大大，已经同意" + qq_num + "绑定白名单啦！" : status);
+                            event.getGroup().sendMessage(status == null ? "管理大大，已经同意" + QQNum + "绑定白名单啦！" : status);
                         }
 
-                        Group for_review_group = RUNNABLE_BOT_INSTANCE.getCore().getGroup(PLUGIN_INSTANCE.getConfig().getLong("Old_Server_Group"));
-                        if(for_review_group != null){
-                            NormalMember new_player = for_review_group.get(qq_num);
-                            if(new_player != null){
-                                new_player.sendMessage("[StarLight - Bot] 你已经通过审核了，快点击这个链接加入我们的服务器交流群吧：https://jq.qq.com/?_wv=1027&k=BwfeiIBU");
+                        Group forReviewGroup = RUNNABLE_BOT_INSTANCE.getCore().getGroup(PLUGIN_INSTANCE.getConfig().getLong("Old_Server_Group"));
+                        if(forReviewGroup != null){
+                            NormalMember newPlayer = forReviewGroup.get(QQNum);
+                            if(newPlayer != null){
+                                forReviewGroup.sendMessage(
+                                        new MessageChainBuilder()
+                                                .append(new At(QQNum))
+                                                .append(" 你已经通过我们的审核了，请注意我的私聊消息有加群二维码哦！")
+                                        .build()
+                                );
+
+                                newPlayer.sendMessage("[StarLight - Bot] 你已经通过审核了，快点击这个链接加入我们的服务器交流群吧：\"https://jq.qq.com/?_wv=1027&k=BwfeiIBU\"");
+
+                                if(PLUGIN_INSTANCE.getConfig().getBoolean("Send_Pic_While_Invite")){
+                                    File picFile = new File(DATABASE, "HelpFile/invite.png");
+                                    if(!picFile.exists() || picFile.isDirectory()){
+                                        Logger.warn("没有入群图片可以发送哦，记得将要邀请的图片命名为invite.png后放在配置文件夹中DataBase/HelpFile文件下，或在配置文件中关闭发送图片的功能");
+                                        return;
+                                    }
+
+                                    newPlayer.sendMessage(ExternalResource.uploadAsImage(picFile, newPlayer));
+                                }
                             }
                             else {
                                 Group review_group = RUNNABLE_BOT_INSTANCE.getCore().getGroup(PLUGIN_INSTANCE.getConfig().getLong("Review_Group"));
                                 if(review_group != null){
                                     review_group.sendMessage(new MessageChainBuilder()
                                             .append("滴滴，我尝试帮你们邀请玩家：")
-                                            .append(String.valueOf(qq_num))
+                                            .append(String.valueOf(QQNum))
                                             .append("，但发送邀请消息失败了诶！")
                                             .build());
                                 }
@@ -182,21 +205,21 @@ public class AdminOperates {
 
             else if(SILENT_EXAM_REGEX.matcher(msg).find()){
                 if(PLUGIN_INSTANCE.getConfig().getLongList("Admins_QQ").contains(senderID)) {
-                    String player_qq_num = msg.substring(6);
+                    String playerQQNum = msg.substring(6);
 
                     try {
-                        long qq_num = Long.parseLong(player_qq_num);
-                        if(qq_num < 9999){
+                        long QQNum = Long.parseLong(playerQQNum);
+                        if(QQNum < 9999){
                             event.getGroup().sendMessage("管理大大！你通过的真的是个QQ号嘛？");
                             return;
                         }
-                        String status = DatabaseOperates.passTheExam(qq_num);
+                        String status = DatabaseOperates.passTheExam(QQNum);
 
-                        if (event.getGroup().contains(qq_num)) {
+                        if (event.getGroup().contains(QQNum)) {
                             if (status == null) {
                                 event.getGroup().sendMessage(new MessageChainBuilder()
                                         .append("管理大大，已经同意")
-                                        .append(new At(qq_num))
+                                        .append(new At(QQNum))
                                         .append("绑定白名单啦！")
                                         .build()
                                 );
@@ -205,10 +228,113 @@ public class AdminOperates {
                             }
 
                         } else {
-                            event.getGroup().sendMessage(status == null ? "管理大大，已经同意" + qq_num + "绑定白名单啦！" : status);
+                            event.getGroup().sendMessage(status == null ? "管理大大，已经同意" + QQNum + "绑定白名单啦！" : status);
                         }
                     } catch (Exception e) {
                         event.getGroup().sendMessage("管理大大！你通过的真的是个QQ号嘛？");
+                    }
+                }
+                else {
+                    event.getGroup().sendMessage(new MessageChainBuilder()
+                            .append("不是管理却还想要执行管理指令的")
+                            .append(new At(senderID))
+                            .append("是屑！")
+                            .build()
+                    );
+                }
+            }
+
+
+            /* 拒绝审核部分 */
+            else if(DENY_EXAM_REGEX.matcher(msg).find()){
+                if(PLUGIN_INSTANCE.getConfig().getLongList("Admins_QQ").contains(senderID)) {
+                    String[] textArray = msg.substring(6).split(" ");
+                    if(textArray.length == 0){
+                        event.getGroup().sendMessage("管理管理，你输入的格式不太对哦！正确格式：#拒绝审核 <QQ号> [原因]");
+                    }
+
+                    String playerQQNum = textArray[0];
+                    String reason = null;
+
+                    if(textArray.length >= 2){
+                        reason = textArray[1];
+                    }
+                    try {
+                        long QQNum = Long.parseLong(playerQQNum);
+                        if (QQNum < 9999) {
+                            event.getGroup().sendMessage("管理大大！你拒绝的真的是个QQ号嘛？");
+                            return;
+                        }
+
+                        Group forReviewGroup = RUNNABLE_BOT_INSTANCE.getCore().getGroup(PLUGIN_INSTANCE.getConfig().getLong("Old_Server_Group"));
+                        if(forReviewGroup != null) {
+                            NormalMember newPlayer = forReviewGroup.get(QQNum);
+                            if (newPlayer != null) {
+                                forReviewGroup.sendMessage(
+                                        new MessageChainBuilder()
+                                                .append(new At(QQNum))
+                                                .append(" 很抱歉，您的审核未通过")
+                                                .append(reason != null ? ("，原因：" + reason) : "")
+                                                .append("，若无异议稍后就可以退群了诶")
+                                                .build()
+                                );
+
+                                DatabaseOperates.addDenyList(QQNum);
+
+                                newPlayer.setNameCard("[审核未通过] " + newPlayer.getNick());
+
+                                event.getGroup().sendMessage("管理管理，我已经拒绝掉这个玩家的审核了哦！");
+                            }
+                            else {
+                                event.getGroup().sendMessage("这个玩家已经不在审核群了诶...");
+                            }
+                        }
+                        else {
+                            event.getGroup().sendMessage("机器人好像还不在审核群诶！快来先把机器人拉入审核群吧！");
+                        }
+                    }
+                    catch (Exception e){
+                        event.getGroup().sendMessage("管理大大！你拒绝的真的是个QQ号嘛？");
+                    }
+                }
+                else {
+                    event.getGroup().sendMessage(new MessageChainBuilder()
+                            .append("不是管理却还想要执行管理指令的")
+                            .append(new At(senderID))
+                            .append("是屑！")
+                            .build()
+                    );
+                }
+            }
+
+
+            else if(CHECK_DENY_LIST_REGEX.matcher(msg).matches()){
+                if(PLUGIN_INSTANCE.getConfig().getLongList("Admins_QQ").contains(senderID)) {
+                    List<Long> denyList = DatabaseOperates.getDenyList();
+
+                    if(denyList.isEmpty()){
+                        event.getGroup().sendMessage("目前群里没有审核被拒绝的玩家了诶");
+                    }
+                    else {
+                        Group forReviewGroup = RUNNABLE_BOT_INSTANCE.getCore().getGroup(PLUGIN_INSTANCE.getConfig().getLong("Old_Server_Group"));
+                        MessageChainBuilder resultMsg = new MessageChainBuilder().append("当前审核群内还有以下玩家审核被拒绝诶：");
+
+                        if(forReviewGroup != null){
+                            for(long QQNum : denyList){
+                                if(forReviewGroup.get(QQNum) != null){
+                                    resultMsg.append("\n- ");
+                                    resultMsg.append(String.valueOf(QQNum));
+                                }
+                                else {
+                                    DatabaseOperates.delDenyList(QQNum);
+                                }
+                            }
+
+                            event.getGroup().sendMessage(resultMsg.build());
+                        }
+                        else {
+                            event.getGroup().sendMessage("机器人好像还不在审核群诶！快来先把机器人拉入审核群吧！");
+                        }
                     }
                 }
                 else {
