@@ -116,10 +116,7 @@ public class Main extends JavaPlugin {
 
         if(!whitelistYml.exists()){
             try {
-                if (!whitelistYml.createNewFile()){
-                    Logger.error("白名单数据库(YAML)创建失败，插件即将自动关闭！请进行检查！");
-                    this.getPluginLoader().disablePlugin(this);
-                }
+                whitelistYml.createNewFile();
 
                 YamlConfiguration whitelistConf = YamlConfiguration.loadConfiguration(whitelistYml);
 
@@ -157,10 +154,7 @@ public class Main extends JavaPlugin {
 
         if(!otherDataYml.exists()){
             try {
-                if (!otherDataYml.createNewFile()){
-                    Logger.error("补充数据库(YAML)创建失败，插件即将自动关闭！请进行检查！");
-                    this.getPluginLoader().disablePlugin(this);
-                }
+                otherDataYml.createNewFile();
             }
             catch (IOException e){
                 Logger.error("补充数据库(YAML)创建错误，插件即将自动关闭！以下是错误的堆栈信息：");
@@ -172,10 +166,7 @@ public class Main extends JavaPlugin {
         File denyListYml = new File(otherData, "DenyList.yml");
         if(!denyListYml.exists()){
             try {
-                if(!denyListYml.createNewFile()){
-                    Logger.error("审核未通过列表(YAML)创建失败，插件即将自动关闭！请进行检查！");
-                    this.getPluginLoader().disablePlugin(this);
-                }
+                denyListYml.createNewFile();
             }
             catch (IOException e){
                 Logger.error("审核未通过列表(YAML)创建错误，插件即将自动关闭！以下是错误的堆栈信息：");
@@ -198,10 +189,7 @@ public class Main extends JavaPlugin {
 
         if(!helpDataFileNormal.exists()){
             try {
-                if(!helpDataFileNormal.createNewFile()){
-                    Logger.error("玩家帮助文档创建错误，插件即将自动关闭！");
-                    this.getPluginLoader().disablePlugin(this);
-                }
+                helpDataFileNormal.createNewFile();
             }
             catch (IOException e){
                 Logger.error("玩家帮助文档创建错误，插件即将自动关闭！以下是错误的堆栈信息：");
@@ -214,10 +202,7 @@ public class Main extends JavaPlugin {
 
         if(!qAndADataFileNormal.exists()){
             try {
-                if(!qAndADataFileNormal.createNewFile()){
-                    Logger.error("玩家Q&A文档创建错误，插件即将自动关闭！");
-                    this.getPluginLoader().disablePlugin(this);
-                }
+                qAndADataFileNormal.createNewFile();
             }
             catch (IOException e){
                 Logger.error("玩家Q&A文档创建错误，插件即将自动关闭！以下是错误的堆栈信息：");
@@ -230,10 +215,7 @@ public class Main extends JavaPlugin {
 
         if(!helpDataFileAdmin.exists()){
             try {
-                if(!helpDataFileAdmin.createNewFile()){
-                    Logger.error("玩家帮助文档创建错误，插件即将自动关闭！");
-                    this.getPluginLoader().disablePlugin(this);
-                }
+                helpDataFileAdmin.createNewFile();
             }
             catch (IOException e){
                 Logger.error("玩家帮助文档创建错误，插件即将自动关闭！以下是错误的堆栈信息：");
@@ -246,10 +228,7 @@ public class Main extends JavaPlugin {
 
         if(!welcomeFile.exists()){
             try {
-                if(welcomeFile.createNewFile()){
-                    Logger.error("欢迎新成员文档创建错误，插件即将自动关闭");
-                    this.getPluginLoader().disablePlugin(this);
-                }
+                welcomeFile.createNewFile();
             }
             catch (IOException e){
                 Logger.error("欢迎新成员文档创建错误，插件即将自动关闭！以下是错误的堆栈信息：");

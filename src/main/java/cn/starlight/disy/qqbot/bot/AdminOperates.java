@@ -2,6 +2,7 @@ package cn.starlight.disy.qqbot.bot;
 
 import cn.starlight.disy.qqbot.utils.DatabaseOperates;
 import cn.starlight.disy.qqbot.utils.Logger;
+import cn.starlight.disy.qqbot.utils.PixelFont;
 import cn.starlight.disy.qqbot.utils.PlayerOperates;
 import net.mamoe.mirai.contact.Group;
 import net.mamoe.mirai.contact.NormalMember;
@@ -166,6 +167,7 @@ public class AdminOperates {
                                 );
 
                                 newPlayer.sendMessage("[StarLight - Bot] 你已经通过审核了，快点击这个链接加入我们的服务器交流群吧：\"https://jq.qq.com/?_wv=1027&k=BwfeiIBU\"");
+                                newPlayer.sendMessage(ExternalResource.uploadAsImage(PixelFont.gen("[StarLight - Bot] 你已经通过审核了，如果你无法扫码，那就试试手动在浏览器里输入这个链接加群吧：\"https://jq.qq.com/?_wv=1027&k=BwfeiIBU\"", 30), newPlayer));
 
                                 if(PLUGIN_INSTANCE.getConfig().getBoolean("Send_Pic_While_Invite")){
                                     File picFile = new File(DATABASE, "HelpFile/invite.png");
