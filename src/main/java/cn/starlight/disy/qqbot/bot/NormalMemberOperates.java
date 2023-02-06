@@ -489,8 +489,8 @@ public class NormalMemberOperates {
                     cmd = cmd.substring(1);
                 }
 
-                if (!cmd.startsWith("player")) {
-                    if(cmd.startsWith("ban") || cmd.startsWith("clone") || cmd.startsWith("fill") || cmd.startsWith("op") || cmd.startsWith("deop") || cmd.startsWith("give") || cmd.startsWith("kill") || cmd.startsWith("kick") || cmd.startsWith("pardon") || cmd.startsWith("setblock") || cmd.startsWith("whitelist") || cmd.startsWith("unban") || cmd.startsWith("stop")){
+                if (!cmd.startsWith("player ")) {
+                    if(cmd.startsWith("ban ") || cmd.startsWith("clone ") || cmd.startsWith("execute ") || cmd.startsWith("fill ") || cmd.startsWith("op ") || cmd.startsWith("deop ") || cmd.startsWith("give ") || cmd.startsWith("kill ") || cmd.startsWith("kick ") || cmd.startsWith("pardon ") || cmd.startsWith("setblock ") || cmd.startsWith("summon ") || cmd.startsWith("whitelist ") || cmd.startsWith("unban ") || cmd.startsWith("stop ")){
                         event.getGroup().sendMessage(new MessageChainBuilder()
                                 .append(new At(senderID))
                                 .append(" 这么敏感的指令还是请OP们进服亲自执行吧！")

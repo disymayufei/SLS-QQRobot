@@ -118,8 +118,8 @@ public class WSServer extends WebSocketServer {
          *   - announce：要求向所有交流群广播一条消息，args为一个Map（{"token": token, "msg": announceMsg}），其中token为校验用的密码， announceMsg为相关的更新信息；若groupArray值不为空，且为一组合法的交流群，则仅向groupArray中的群聊发送该广播；无返回值
          *   - onlineModeStatus：代表玩家正版认证状态，args为一个Map（{"status": onlineStatus, "reason": reason, "player": playerName}），onlineStatus，reason与player均为一String，状态修改成功onlineStatus为"success"，reason为null，失败onlineStatus为"failed"，并返回失败原因，playerName为正版认证的玩家名
          *   - playerList：代表目标服务器的玩家列表，args为一个array，包含所有在线玩家ID
-         *   - commandResult: 代表目标服务器命令执行后的结果，args为一个map：{"command": cmd, "status": executeStatus}，cmd为一String，表示执行的命令内容; executeStatus为一String，含义与onlineModeStatus中一致
-         *   - commandOutput: 代表服务器在执行命令后的输出，args为一个String，表示控制台的输出内容
+         *   - commandResult: 代表目标服务器命令执行后的结果，args为一个map（{"command": cmd, "status": executeStatus}），cmd为一String，表示执行的命令内容; executeStatus为一String，含义与onlineModeStatus中一致
+         *   - commandOutput: 代表服务器在执行命令后的输出，args为一个map（{"command": cmd, "message": msg}），cmd为一String，表示执行的命令内容;msg为一String表示控制台的输出内容
          *   - changeExamStatus: 代表要修改某玩家的审核状态，args为一个Map（{"QQNum": num, "passed": isPassed, "token": token}），num为一Number，表示玩家的QQ号，isPassed为一boolean，表示玩家是否过审，token为校验用的密码，返回过审信息。
          *   - chat: 代表某服务器的聊天信息，args为一个Map（{"identity": serverIdentity, "text": chatText}），serverIdentity为一String，表示服务器的身份（会展示在聊天内容的开头），chatText为一String，表示聊天的内容
          */
@@ -319,10 +319,20 @@ public class WSServer extends WebSocketServer {
                 }
 
                 case "commandOutput" -> {
-                    String cmdOutput = receiveObj.get("args").getAsString();
+                    JsonObject cmdOutputPacket = receiveObj.getAsJsonObject("args");
 
-                    if(cmdOutput != null){
-                        AnnounceToAllGroups(groupArray, cmdOutput);
+                    String cmd = cmdOutputPacket.get("command").getAsString();
+
+                    String cmdOutput = cmdOutputPacket.get("message").getAsString();
+                    if(cmdOutput == null){
+                        cmdOutput = "";
+                    }
+                    else if(cmdOutput.length() > 4000){
+                        cmdOutput = "返回内容过长，已自动截断:\n" + cmdOutput.substring(4000);
+                    }
+
+                    if(cmd != null){
+                        AnnounceToAllGroups(groupArray, "命令\"" + cmd + "\"的返回结果为: " + cmdOutput);
                     }
                 }
 
