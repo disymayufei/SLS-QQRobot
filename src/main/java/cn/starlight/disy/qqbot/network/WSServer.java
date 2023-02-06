@@ -1,5 +1,6 @@
 package cn.starlight.disy.qqbot.network;
 
+import cn.starlight.disy.qqbot.Main;
 import cn.starlight.disy.qqbot.utils.Logger;
 import cn.starlight.disy.qqbot.utils.PlayerOperates;
 import com.google.gson.JsonArray;
@@ -57,6 +58,8 @@ public class WSServer extends WebSocketServer {
     private int checkServerExtraMsgCounter = 0;
     private int checkInternalServerExtraMsgCounter = 0;
     private int checkInternalServerExtraMsgForInternalGroupCounter = 0;
+
+    private StringBuffer internal_msg_builder = new StringBuffer("说到内服呀，情况是这样的:");
 
     public WSServer(InetSocketAddress address){
         super(address);
@@ -117,8 +120,8 @@ public class WSServer extends WebSocketServer {
          *   - playerList：代表目标服务器的玩家列表，args为一个array，包含所有在线玩家ID
          *   - commandResult: 代表目标服务器命令执行后的结果，args为一个map：{"command": cmd, "status": executeStatus}，cmd为一String，表示执行的命令内容; executeStatus为一String，含义与onlineModeStatus中一致
          *   - commandOutput: 代表服务器在执行命令后的输出，args为一个String，表示控制台的输出内容
-         *   - changeExamStatus: 代表要修改某玩家的审核状态，args为一个Map（{"QQNum": num, "passed": isPassed, "token": token}）num为一Number，表示玩家的QQ号，isPassed为一boolean，表示玩家是否过审，token为校验用的密码，返回过审信息。
-         *   -
+         *   - changeExamStatus: 代表要修改某玩家的审核状态，args为一个Map（{"QQNum": num, "passed": isPassed, "token": token}），num为一Number，表示玩家的QQ号，isPassed为一boolean，表示玩家是否过审，token为校验用的密码，返回过审信息。
+         *   - chat: 代表某服务器的聊天信息，args为一个Map（{"identity": serverIdentity, "text": chatText}），serverIdentity为一String，表示服务器的身份（会展示在聊天内容的开头），chatText为一String，表示聊天的内容
          */
 
         File dataFile = new File(OTHER_DATA, "Data.yml");
@@ -256,67 +259,52 @@ public class WSServer extends WebSocketServer {
 
                 case "playerList" -> {
                     JsonArray onlinePlayers = receiveObj.getAsJsonArray("args");
-                    if(onlinePlayers.size() > 0){
-                        StringBuilder result_builder = new StringBuilder("这个服务器呀，有");
+                    String clientIdentity = getClientIdentity(conn);
+                    if(clientIdentity != null){
+                        if(clientIdentity.equals("Bungeecord")){
+                            StringBuilder result_builder = new StringBuilder("说到外服呀，有");
 
-                        result_builder.append(onlinePlayers.size());
-                        result_builder.append(" / ");
-                        result_builder.append(Calendar.getInstance().get(Calendar.YEAR));
-                        result_builder.append("人在线哦：");
+                            result_builder.append(onlinePlayers.size());
+                            result_builder.append(" / ");
+                            result_builder.append(Calendar.getInstance().get(Calendar.YEAR));
+                            result_builder.append("人在线哦：");
 
-                        for(int i = 0; i < onlinePlayers.size(); i++){
-                            result_builder.append("\n - ");
-                            result_builder.append(onlinePlayers.get(i).getAsString());
+                            for(int i = 0; i < onlinePlayers.size(); i++){
+                                result_builder.append("\n - ");
+                                result_builder.append(onlinePlayers.get(i).getAsString());
+                            }
+
+                            AnnounceToAllGroups(groupArray, result_builder.toString());
+
+                            AnnounceToAllGroups(groupArray, CHECK_SERVER_EXTRA_MSG.get(checkServerExtraMsgCounter));
+                            checkServerExtraMsgCounter++;
+                            if(checkServerExtraMsgCounter >= CHECK_SERVER_EXTRA_MSG.size()){
+                                checkServerExtraMsgCounter = 0;
+                            }
                         }
-
-                        AnnounceToAllGroups(groupArray, result_builder.toString());
-
-                        String clientIdentity = getClientIdentity(conn);
-                        if(clientIdentity != null){
-                            if(clientIdentity.equals("Bungeecord")){
-                                AnnounceToAllGroups(groupArray, CHECK_SERVER_EXTRA_MSG.get(checkServerExtraMsgCounter));
-                                checkServerExtraMsgCounter++;
-                                if(checkServerExtraMsgCounter >= CHECK_SERVER_EXTRA_MSG.size()){
-                                    checkServerExtraMsgCounter = 0;
-                                }
-                            }
-                            else if(clientIdentity.equals("Internal-Survival")){
-                                List<Long> allInternalGroups = PLUGIN_INSTANCE.getConfig().getLongList("Internal_Server_Group");
-
-                                JsonArray internalGroup = new JsonArray();
-                                JsonArray otherGroup = new JsonArray();
-
-                                for(JsonElement groupELe : groupArray){
-                                    long groupID = groupELe.getAsLong();
-                                    if (allInternalGroups.contains(groupID)) {
-                                        internalGroup.add(groupELe);
-                                    }
-                                    else {
-                                        otherGroup.add(groupELe);
-                                    }
-                                }
-
-                                if(internalGroup.size() > 0){
-                                    AnnounceToAllGroups(internalGroup, CHECK_INTERNAL_SERVER_EXTRA_MSG_FOR_INTERNAL_GROUP.get(checkInternalServerExtraMsgForInternalGroupCounter));
-                                    checkInternalServerExtraMsgForInternalGroupCounter++;
-                                    if(checkInternalServerExtraMsgForInternalGroupCounter >= CHECK_INTERNAL_SERVER_EXTRA_MSG_FOR_INTERNAL_GROUP.size()){
-                                        checkInternalServerExtraMsgForInternalGroupCounter = 0;
-                                    }
-                                }
-
-                                if(otherGroup.size() > 0){
-                                    AnnounceToAllGroups(otherGroup, CHECK_INTERNAL_SERVER_EXTRA_MSG.get(checkInternalServerExtraMsgCounter));
-                                    checkInternalServerExtraMsgCounter++;
-                                    if(checkInternalServerExtraMsgCounter >= CHECK_INTERNAL_SERVER_EXTRA_MSG.size()){
-                                        checkInternalServerExtraMsgCounter = 0;
-                                    }
-                                }
-
-                            }
+                        else if(clientIdentity.contains("Internal")){
+                            addInternalServerBuffer(clientIdentity, onlinePlayers, groupArray);
                         }
                     }
                     else {
-                        AnnounceToAllGroups(groupArray, "az，好像没人在这个服务器里玩诶...");
+                        if(onlinePlayers.size() > 0){
+                            StringBuilder result_builder = new StringBuilder("说到这个服务器呀，有");
+
+                            result_builder.append(onlinePlayers.size());
+                            result_builder.append(" / ");
+                            result_builder.append(Calendar.getInstance().get(Calendar.YEAR));
+                            result_builder.append("人在线哦：");
+
+                            for(int i = 0; i < onlinePlayers.size(); i++){
+                                result_builder.append("\n - ");
+                                result_builder.append(onlinePlayers.get(i).getAsString());
+                            }
+
+                            AnnounceToAllGroups(groupArray, result_builder.toString());
+                        }
+                        else {
+                            AnnounceToAllGroups(groupArray, "az，好像没人在这个服务器里玩诶...");
+                        }
                     }
                 }
 
@@ -337,6 +325,13 @@ public class WSServer extends WebSocketServer {
                         AnnounceToAllGroups(groupArray, cmdOutput);
                     }
                 }
+
+                case "chat" -> {
+                    JsonObject chatPacket = receiveObj.getAsJsonObject("args");
+
+                    String chat = String.format("[%s] %s", chatPacket.get("identity").getAsString(), chatPacket.get("text").getAsString());
+                    AnnounceToAllGroups(groupArray, chat);
+                }
             }
         }
     }
@@ -346,7 +341,67 @@ public class WSServer extends WebSocketServer {
         Logger.info(String.format("WebSocket for Bot已经启动，正在监听:ws://%s:%d", this.getAddress().getHostString(), this.getPort()));
     }
 
-    private void AnnounceToAllGroups(JsonArray groupArray, String msg){
+    public synchronized void sendCheckInternalServerMsg(JsonArray groupArray){
+        AnnounceToAllGroups(groupArray, internal_msg_builder.toString());
+
+        List<Long> allInternalGroups = PLUGIN_INSTANCE.getConfig().getLongList("Internal_Server_Group");
+
+        JsonArray internalGroup = new JsonArray();
+        JsonArray otherGroup = new JsonArray();
+
+        for(JsonElement groupELe : groupArray){
+            long groupID = groupELe.getAsLong();
+            if (allInternalGroups.contains(groupID)) {
+                internalGroup.add(groupELe);
+            }
+            else {
+                otherGroup.add(groupELe);
+            }
+        }
+
+        if(internalGroup.size() > 0){
+            AnnounceToAllGroups(internalGroup, CHECK_INTERNAL_SERVER_EXTRA_MSG_FOR_INTERNAL_GROUP.get(checkInternalServerExtraMsgForInternalGroupCounter));
+            checkInternalServerExtraMsgForInternalGroupCounter++;
+            if(checkInternalServerExtraMsgForInternalGroupCounter >= CHECK_INTERNAL_SERVER_EXTRA_MSG_FOR_INTERNAL_GROUP.size()){
+                checkInternalServerExtraMsgForInternalGroupCounter = 0;
+            }
+        }
+
+        if(otherGroup.size() > 0){
+            AnnounceToAllGroups(otherGroup, CHECK_INTERNAL_SERVER_EXTRA_MSG.get(checkInternalServerExtraMsgCounter));
+            checkInternalServerExtraMsgCounter++;
+            if(checkInternalServerExtraMsgCounter >= CHECK_INTERNAL_SERVER_EXTRA_MSG.size()){
+                checkInternalServerExtraMsgCounter = 0;
+            }
+        }
+
+        internal_msg_builder = new StringBuffer("说到内服呀，情况是这样的:");
+    }
+
+    private synchronized void addInternalServerBuffer(String clientIdentity, JsonArray onlinePlayers, JsonArray groupArray){
+        internal_msg_builder.append("\n\n[");
+        internal_msg_builder.append(clientIdentity);
+        internal_msg_builder.append("] ");
+
+        if(onlinePlayers.size() > 0){
+            internal_msg_builder.append(onlinePlayers.size());
+            internal_msg_builder.append(" / ");
+            internal_msg_builder.append(Calendar.getInstance().get(Calendar.YEAR));
+            internal_msg_builder.append(":");
+            for(int i = 0; i < onlinePlayers.size(); i++){
+                internal_msg_builder.append("\n - ");
+                internal_msg_builder.append(onlinePlayers.get(i).getAsString());
+            }
+        }
+        else {
+            internal_msg_builder.append("0 / ");
+            internal_msg_builder.append(Calendar.getInstance().get(Calendar.YEAR));
+        }
+
+        Main.INTERNAL_SERVER_TIMER_INSTANCE.resetLock(groupArray);
+    }
+
+    private synchronized void AnnounceToAllGroups(JsonArray groupArray, String msg){
         if(groupArray != null && groupArray.size() > 0){
             for (JsonElement groupEle : groupArray){
                 long groupNum = groupEle.getAsLong();

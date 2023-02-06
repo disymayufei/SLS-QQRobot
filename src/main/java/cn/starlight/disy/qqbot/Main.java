@@ -3,6 +3,7 @@ package cn.starlight.disy.qqbot;
 import cn.starlight.disy.qqbot.bot.RunnableBot;
 import cn.starlight.disy.qqbot.listeners.PlayerOnJoin;
 import cn.starlight.disy.qqbot.network.WSServer;
+import cn.starlight.disy.qqbot.thread.InternalServerTimer;
 import cn.starlight.disy.qqbot.utils.DatabaseOperates;
 import cn.starlight.disy.qqbot.utils.Logger;
 import cn.starlight.disy.qqbot.utils.PasswordGenerator;
@@ -23,9 +24,13 @@ import static cn.starlight.disy.qqbot.bot.RunnableBot.RUNNABLE_BOT_INSTANCE;
 public class Main extends JavaPlugin {
 
     public static Main PLUGIN_INSTANCE = null;
+    public static WSServer WEBSOCKET_INSTANCE = null;
     public static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
+    public static InternalServerTimer INTERNAL_SERVER_TIMER_INSTANCE = null;
+
     public static Thread WSS_THREAD = null;
+    public static Thread INTERNAL_CHECK_TIMER_THREAD = null;
 
     @Override
     public void onEnable(){
@@ -47,10 +52,14 @@ public class Main extends JavaPlugin {
             listenedPort = 16123;
         }
 
-        WebSocketServer wsServer = new WSServer(new InetSocketAddress("0.0.0.0", listenedPort));
+        WEBSOCKET_INSTANCE = new WSServer(new InetSocketAddress("0.0.0.0", listenedPort));
 
-        WSS_THREAD = new Thread(wsServer);
+        WSS_THREAD = new Thread(WEBSOCKET_INSTANCE);
         WSS_THREAD.start();
+
+        INTERNAL_SERVER_TIMER_INSTANCE = new InternalServerTimer();
+        INTERNAL_CHECK_TIMER_THREAD = new Thread(INTERNAL_SERVER_TIMER_INSTANCE);
+        INTERNAL_CHECK_TIMER_THREAD.start();
 
         Bukkit.getPluginManager().registerEvents(new PlayerOnJoin(), this);
     }
@@ -63,8 +72,16 @@ public class Main extends JavaPlugin {
 
         if(WSS_THREAD != null){
             WSS_THREAD.interrupt();
+            WSS_THREAD = null;
         }
 
+        if(INTERNAL_CHECK_TIMER_THREAD != null){
+            INTERNAL_CHECK_TIMER_THREAD.interrupt();
+            INTERNAL_CHECK_TIMER_THREAD = null;
+            INTERNAL_SERVER_TIMER_INSTANCE = null;
+        }
+
+        WEBSOCKET_INSTANCE = null;
         PLUGIN_INSTANCE = null;
 
         Logger.info("Bot关闭了哦，有缘再见！");

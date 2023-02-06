@@ -1,5 +1,6 @@
 package cn.starlight.disy.qqbot.bot;
 
+import cn.starlight.disy.qqbot.Main;
 import cn.starlight.disy.qqbot.network.WSServer;
 import cn.starlight.disy.qqbot.utils.*;
 import kotlin.Unit;
@@ -92,6 +93,7 @@ public class NormalMemberOperates {
     private final Pattern ONLINE_MODE_REGEX = Pattern.compile("^[#＃](确认|取消)正版(认证|验证)[:：]");
     private final Pattern EXECUTE_SINGLE_CMD_REGEX = Pattern.compile("^[#＃]执行命令[:：]");
     private final Pattern Q_AND_A_REGEX = Pattern.compile("^[#＃]Q", Pattern.CASE_INSENSITIVE);
+    private final Pattern SHOUT_TO_INTERNAL = Pattern.compile("^[#＃]内服喊话[:：]");
 
     private final Pattern IMAGE_AND_VIDEO_FILE_REGEX = Pattern.compile("(.jpg|.jpeg|.jiff|.png|.gif|.bmp|.webp|.mp4|.mov|.mkv)$");
     /* 正则部分常量结束 */
@@ -357,7 +359,7 @@ public class NormalMemberOperates {
                     /*
                     ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
                     helpMesBuilder.add(BOT_INSTANCE.getBot(), new PlainText(this.getPlayerHelpText()));
-                    event.getGroup().sendMessage(helpMesBuilder.build());
+                    event.getGroup().resetLock(helpMesBuilder.build());
                      */
                 }
             }
@@ -375,7 +377,7 @@ public class NormalMemberOperates {
                 /*
                 ForwardMessageBuilder helpMesBuilder = new ForwardMessageBuilder(event.getGroup());
                 helpMesBuilder.add(BOT_INSTANCE.getBot(), new PlainText(this.getPlayerHelpText()));
-                event.getGroup().sendMessage(helpMesBuilder.build());
+                event.getGroup().resetLock(helpMesBuilder.build());
                  */
             }
         }
@@ -453,21 +455,27 @@ public class NormalMemberOperates {
 
         // 查内服
         else if(CHECK_INTERNAL_SERVER_REGEX.matcher(groupMes).matches()){
-            if(WSServer.connectionMap.containsKey("Internal-Survival")){
-                WebSocket conn = WSServer.connectionMap.get("Internal-Survival");
-                if(conn != null && conn.isOpen()){
-                    Map<String, Object> packet = new HashMap<>();
-                    packet.put("type", "getOnlinePlayers");
-                    packet.put("args", null);
-                    packet.put("reqGroup", new long[]{ groupID });
-
-                    conn.send(GSON.toJson(packet));
-
-                    return;
-                }
+            if(Main.INTERNAL_SERVER_TIMER_INSTANCE.isLocking()){
+                event.getGroup().sendMessage("查询太快了诶，先休息一下吧！");
+                return;
             }
 
-            event.getGroup().sendMessage(new MessageChainBuilder().append(new At(senderID)).append(" 内服服务端看起来当前不在线呢！可以稍后再试一次！").build());
+            Map<String, Object> packet = new HashMap<>();
+            packet.put("type", "getOnlinePlayers");
+            packet.put("args", null);
+            packet.put("reqGroup", new long[]{ groupID });
+
+            for(Map.Entry<String, WebSocket> pair : WSServer.connectionMap.entrySet()){
+                if(pair.getKey().contains("Internal")){
+                    WebSocket conn = pair.getValue();
+                    if(conn != null && conn.isOpen()){
+                        conn.send(GSON.toJson(packet));
+                    }
+                    else {
+                        event.getGroup().sendMessage(new MessageChainBuilder().append(new At(senderID)).append(" 内服节点[").append(pair.getKey()).append("]看起来当前不在线呢！这个服的玩家可能不会正常显示哦！").build());
+                    }
+                }
+            }
         }
 
         // 向内服执行命令
@@ -519,20 +527,28 @@ public class NormalMemberOperates {
                     }
                 }
 
+                Map<String, Object> cmdPacket = new HashMap<>();
+
+
                 if(WSServer.connectionMap.containsKey("Internal-Survival")){
                     WebSocket conn = WSServer.connectionMap.get("Internal-Survival");
                     if(conn != null && conn.isOpen()){
                         Map<String, Object> packet = new HashMap<>();
+                        cmdPacket.put("cmd", cmd);
+
                         packet.put("type", "exeCmd");
-                        packet.put("args", cmd);
+                        packet.put("args", cmdPacket);
                         packet.put("reqGroup", new long[]{ groupID });
 
                         conn.send(GSON.toJson(packet));
 
                         if(isFakePlayerSpawnCmd && fakePlayerName != null){
                             Map<String, Object> extraPacket = new HashMap<>();
+                            cmdPacket.clear();
+                            cmdPacket.put("cmd", String.format("gamemode survival %s", fakePlayerName));
+
                             extraPacket.put("type", "exeCmd");
-                            extraPacket.put("args", String.format("gamemode survival %s", fakePlayerName));
+                            extraPacket.put("args", cmdPacket);
                             extraPacket.put("reqGroup", null);
 
                             conn.send(GSON.toJson(extraPacket));
@@ -588,6 +604,40 @@ public class NormalMemberOperates {
             }
 
             event.getGroup().sendMessage("注意哦！由于腐竹没有额外资金，也不愿意向某tx交保护费，所以这些链接也许无法从QQ直接点开哦！可以先把链接复制到浏览器，然后就能打开啦！");
+        }
+
+        // 内服喊话
+        else if(SHOUT_TO_INTERNAL.matcher(groupMes).find()){
+            if(PLUGIN_INSTANCE.getConfig().getLongList("Internal_Server_Group").contains(groupID)){
+                String chat = groupMes.substring(6);
+
+                Map<String, Object> packet = new HashMap<>();
+                packet.put("type", "chat");
+
+                String playerNameCard = event.getSender().getNameCard();
+                if(playerNameCard.equals("")){
+                    playerNameCard = event.getSender().getNick();
+                }
+
+                packet.put("args", String.format("[SLS内群-%s] %s", playerNameCard, chat));
+                packet.put("reqGroup", new long[]{ groupID });
+
+                for(Map.Entry<String, WebSocket> pair : WSServer.connectionMap.entrySet()){
+                    if(pair.getKey().contains("Internal")){
+                        WebSocket conn = pair.getValue();
+
+                        if(conn != null && conn.isOpen()){
+                            pair.getValue().send(GSON.toJson(packet));
+                        }
+                        else {
+                            event.getGroup().sendMessage("子服" + pair.getKey() + "的节点当前好像不在线诶，你发送的消息可能无法到达这个子服哦！");
+                        }
+                    }
+                }
+            }
+            else {
+                event.getGroup().sendMessage("仅限内服群可以使用这项喊话哦！");
+            }
         }
     }
 

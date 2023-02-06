@@ -288,7 +288,7 @@ public class AdminOperates {
                                 event.getGroup().sendMessage("管理管理，我已经拒绝掉这个玩家的审核了哦！");
                             }
                             else {
-                                event.getGroup().sendMessage("这个玩家已经不在审核群了诶...");
+                                event.getGroup().sendMessage("玩家" + QQNum + "已经不在审核群了诶...");
                             }
                         }
                         else {
